@@ -118,7 +118,7 @@
             android:name="app.lawnchair.gestures.handlers.SleepMethodDeviceAdmin$SleepDeviceAdmin"
             android:description="@string/dt2s_admin_hint"
             android:exported="true"
-            android:label="@string/app_name"
+            android:label="@string/derived_app_name"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data
                 android:name="android.app.device_admin"
@@ -131,7 +131,7 @@
         <service
             android:name="app.lawnchair.LawnchairAccessibilityService"
             android:exported="false"
-            android:label="@string/app_name"
+            android:label="@string/derived_app_name"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />

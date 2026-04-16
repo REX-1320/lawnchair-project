@@ -25,6 +25,7 @@
     <string name="preview_label">Preview</string>
 
     <string name="app_name" translatable="false">REX</string>
+    <string name="derived_app_name" translatable="false">REX</string>
 
     <string name="action_create">Create</string>
     <string name="action_backup">Backup</string>
@@ -491,7 +492,7 @@
 
     <!-- Toggle button for enabling Smartspace -->
     <string name="smartspace_widget_toggle_label">Show on home screen</string>
-    <string name="smartspace_widget_toggle_description">At a Glance can be manually added to the home screen by placing the Lawnchair widget</string>
+    <string name="smartspace_widget_toggle_description">At a Glance can be manually added to the home screen by placing the REX widget</string>
 
     <!-- List of available providers -->
     <string name="smartspace_mode_label">At a Glance provider</string>
@@ -803,7 +804,7 @@
     <string name="max_folder_rows">Maximum folder rows</string>
 
     <!-- Quickstep settings -->
-    <string name="quickswitch_ignored_warning">These settings will be ignored as Lawnchair isn\'t set as the Recents screen provider</string>
+    <string name="quickswitch_ignored_warning">These settings will be ignored as REX isn\'t set as the Recents screen provider</string>
 
     <string name="quickstep_incompatible">Incompatible system integration</string>
     <string name="quickstep_incompatible_description">Your device is configured to have system gestures (known as Quickstep) provided by %1$s, but this version of %1$s isn\'t compatible with your Android version. To continue using your device, please uninstall %1$s updates or disable %1$s as a system gesture provider.</string>
