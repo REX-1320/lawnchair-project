@@ -30,7 +30,7 @@ public class WidgetItem extends ComponentKey {
 
     public WidgetItem(LauncherAppWidgetProviderInfo info,
             InvariantDeviceProfile idp, IconCache iconCache, Context context) {
-        super(info.provider, info.getProfile());
+        super(info.provider, getProfileSafe(info));
 
         label = iconCache.getTitleNoCache(info);
         description = ATLEAST_S && info.loadDescription(context) != null ? info.loadDescription(context) : "";
@@ -39,6 +39,15 @@ public class WidgetItem extends ComponentKey {
 
         spanX = Math.min(info.spanX, idp.numColumns);
         spanY = Math.min(info.spanY, idp.numRows);
+    }
+
+    private static android.os.UserHandle getProfileSafe(LauncherAppWidgetProviderInfo info) {
+        try {
+            return info.getProfile();
+        } catch (NullPointerException e) {
+            // Custom widgets (e.g., Music Pro) may have null applicationInfo
+            return android.os.Process.myUserHandle();
+        }
     }
 
     public WidgetItem(ShortcutConfigActivityInfo info, IconCache iconCache) {
