@@ -155,6 +155,12 @@
     <!-- A widget category label for grouping widgets related to note taking. [CHAR_LIMIT=30] -->
     <string name="widget_category_note_taking">Note-taking</string>
 
+    <!-- A widget category label for REX debug widgets. [CHAR_LIMIT=30] -->
+    <string name="widget_category_rex_debug">REX (debug)</string>
+
+    <!-- Music widget placeholder text when no music is playing. [CHAR_LIMIT=30] -->
+    <string name="no_music">No music playing</string>
+
     <!-- Accessibility label on the widget preview that on click (if add button is hidden) shows the button to add widget to the home screen. [CHAR_LIMIT=none] -->
     <string name="widget_cell_tap_to_show_add_button_label">Show add button</string>
     <!-- Accessibility label on the widget preview that on click (if add button is showing) hides the button to add widget to the home screen. [CHAR_LIMIT=none] -->

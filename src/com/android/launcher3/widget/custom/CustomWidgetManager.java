@@ -87,6 +87,20 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
 
         pluginManager.addPluginListener(this, CustomWidgetPlugin.class, true);
         tracker.addCloseable(() -> pluginManager.removePluginListener(this));
+
+        // Register built-in custom widgets
+        registerBuiltInCustomWidgets(context);
+    }
+
+    private void registerBuiltInCustomWidgets(Context context) {
+        // Add Music Pro widget
+        try {
+            com.android.launcher3.widget.MusicWidgetProvider.getWidgetInfo(context)
+                    .initSpans(context, com.android.launcher3.LauncherAppState.getIDP(context));
+            mCustomWidgets.add(com.android.launcher3.widget.MusicWidgetProvider.getWidgetInfo(context));
+        } catch (Exception e) {
+            // Safe: widget registration failure won't crash launcher
+        }
     }
 
     @Override

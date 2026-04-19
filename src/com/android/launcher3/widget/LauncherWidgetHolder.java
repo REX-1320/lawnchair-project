@@ -507,8 +507,22 @@ public class LauncherWidgetHolder {
                 return hostView;
             }
             try {
-                return (LauncherAppWidgetHostView) mWidgetHost.createView(
+                LauncherAppWidgetHostView hostView = (LauncherAppWidgetHostView) mWidgetHost.createView(
                         mContext, appWidgetId, appWidget);
+
+                // Handle custom widgets (Music Pro, etc.) that use Java views instead of RemoteViews
+                if (appWidgetId <= com.android.launcher3.model.data.LauncherAppWidgetInfo.CUSTOM_WIDGET_ID
+                        && appWidget instanceof com.android.launcher3.widget.custom.CustomAppWidgetProviderInfo
+                        && appWidget.provider.equals(com.android.launcher3.widget.MusicWidgetProvider.COMPONENT_NAME)) {
+                    com.android.launcher3.widget.CustomWidgetHostView customView =
+                            new com.android.launcher3.widget.CustomWidgetHostView(mContext);
+                    customView.setAppWidget(appWidgetId, appWidget);
+                    ((android.view.ViewGroup) hostView).addView(customView,
+                            new android.widget.FrameLayout.LayoutParams(
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+                }
+                return hostView;
             } catch (Exception e) {
                 if (!Utilities.isBinderSizeError(e)) {
                     throw new RuntimeException(e);

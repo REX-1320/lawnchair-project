@@ -27,7 +27,7 @@ import androidx.annotation.VisibleForTesting;
 
 import com.android.launcher3.Utilities;
 
-import com.android.launcher3.BuildConfig;
+import com.android.launcher3.BuildConfigs;
 import com.android.launcher3.Flags;
 
 import com.patrykmichalik.opto.core.PreferenceExtensionsKt;
@@ -39,6 +39,8 @@ import app.lawnchair.preferences2.PreferenceManager2;
  * <p>All the flags should be defined here with appropriate default values.
  */
 public final class FeatureFlags {
+
+    public static final boolean IS_STUDIO_BUILD = BuildConfigs.IS_STUDIO_BUILD;
 
     private FeatureFlags() { }
 

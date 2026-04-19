@@ -100,6 +100,8 @@ import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.BaseDragLayer;
 import com.android.launcher3.widget.PendingAddShortcutInfo;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
@@ -156,6 +158,8 @@ public final class Utilities {
     @ChecksSdkIntAtLeast(api = VERSION_CODES.BAKLAVA)
     public static final boolean ATLEAST_BAKLAVA = Build.VERSION.SDK_INT >= VERSION_CODES.BAKLAVA;
 
+    public static final boolean IS_DEBUG_DEVICE = BuildConfigs.IS_DEBUG_DEVICE;
+
     @ChecksSdkIntAtLeast(api = 36, codename = "BAKLAVA_1")
     public static final boolean ATLEAST_BAKLAVA_1 = 
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) 
@@ -165,6 +169,15 @@ public final class Utilities {
      * Set on a motion event dispatched from the nav bar. See {@link MotionEvent#setEdgeFlags(int)}.
      */
     public static final int EDGE_NAV_BAR = 1 << 8;
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({TRANSLATE_LEFT, TRANSLATE_RIGHT, TRANSLATE_UP, TRANSLATE_DOWN})
+    public @interface AdjustmentDirection {}
+
+    public static final int TRANSLATE_LEFT = 0;
+    public static final int TRANSLATE_RIGHT = 1;
+    public static final int TRANSLATE_UP = 2;
+    public static final int TRANSLATE_DOWN = 3;
 
     /**
      * Returns true if theme is dark.

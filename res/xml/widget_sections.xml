@@ -28,4 +28,10 @@
         launcher:sectionTitle="@string/widget_category_note_taking">
         <widget launcher:provider="com.android.systemui/.notetask.shortcut.CreateNoteTaskShortcutActivity" />
     </section>
+    <section
+        launcher:category="2"
+        launcher:sectionDrawable="@android:drawable/ic_media_play"
+        launcher:sectionTitle="@string/widget_category_rex_debug">
+        <widget launcher:provider="android/#custom-widget-music-pro" />
+    </section>
 </widget-sections>

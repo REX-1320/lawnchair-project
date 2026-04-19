@@ -1835,7 +1835,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
         f *= 1.2f * Math.PI / 2.0f;
 
         float sineVal = (float) Math.sin(f);
-        float t = (f + Math.PI / 2.0f) / Math.PI; // normalize to 0-1
+        float t = (float) ((f + Math.PI / 2.0f) / Math.PI); // normalize to 0-1
         float eased = 1f - ((1f - t) * (1f - t) * (1f - t)); // cubic ease-out
 
         return Math.max(-1f, Math.min(1f, sineVal * (1f + 0.3f * eased)));
