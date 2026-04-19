@@ -28,8 +28,8 @@
     <string name="settings_fragment_name" translatable="false">com.android.launcher3.settings.SettingsActivity$LauncherSettingsFragment</string>
 
     <!-- AllApps & Launcher transitions -->
-    <!-- The duration of the PagedView page snap animation -->
-    <integer name="config_pageSnapAnimationDuration">750</integer>
+    <!-- The duration of the PagedView page snap animation (reduced from 750ms for snappier iOS-like feel) -->
+    <integer name="config_pageSnapAnimationDuration">500</integer>
 
     <!-- The duration of the PagedView page snap animation -->
     <integer name="config_keyboardTaskFocusSnapAnimationDuration">750</integer>

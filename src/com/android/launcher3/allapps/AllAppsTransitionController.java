@@ -76,88 +76,90 @@ import com.patrykmichalik.opto.core.PreferenceExtensionsKt;
  * <p/>
  * Algorithm:
  * If release velocity > THRES1, snap according to the direction of movement.
- * If release velocity < THRES1, snap according to either top or bottom depending on whether it's
+ * If release velocity < THRES1, snap according to either top or bottom
+ * depending on whether it's
  * closer to top or closer to the page indicator.
  */
 public class AllAppsTransitionController
         implements StateHandler<LauncherState>, OnDeviceProfileChangeListener {
-    // This constant should match the second derivative of the animator interpolator.
-    public static final float INTERP_COEFF = 1.7f;
+    // This constant should match the second derivative of the animator
+    // interpolator. Reduced from 1.7 to 1.6 for smoother all-apps transition.
+    public static final float INTERP_COEFF = 1.6f;
     public static final int REVERT_SWIPE_ALL_APPS_TO_HOME_ANIMATION_DURATION_MS = 200;
 
     private static final float NAV_BAR_COLOR_FORCE_UPDATE_THRESHOLD = 0.1f;
-    private static final float SWIPE_DRAG_COMMIT_THRESHOLD =
-            1 - AllAppsSwipeController.ALL_APPS_STATE_TRANSITION_MANUAL;
+    private static final float SWIPE_DRAG_COMMIT_THRESHOLD = 1
+            - AllAppsSwipeController.ALL_APPS_STATE_TRANSITION_MANUAL;
 
-    public static final FloatProperty<AllAppsTransitionController> ALL_APPS_PROGRESS =
-            new FloatProperty<AllAppsTransitionController>("allAppsProgress") {
+    public static final FloatProperty<AllAppsTransitionController> ALL_APPS_PROGRESS = new FloatProperty<AllAppsTransitionController>(
+            "allAppsProgress") {
 
-                @Override
-                public Float get(AllAppsTransitionController controller) {
-                    return controller.mProgress;
-                }
+        @Override
+        public Float get(AllAppsTransitionController controller) {
+            return controller.mProgress;
+        }
 
-                @Override
-                public void setValue(AllAppsTransitionController controller, float progress) {
-                    controller.setProgress(progress);
-                }
-            };
+        @Override
+        public void setValue(AllAppsTransitionController controller, float progress) {
+            controller.setProgress(progress);
+        }
+    };
 
     private static final float ALL_APPS_PULL_BACK_TRANSLATION_DEFAULT = 0f;
 
-    public static final FloatProperty<AllAppsTransitionController> ALL_APPS_PULL_BACK_TRANSLATION =
-            new FloatProperty<AllAppsTransitionController>("allAppsPullBackTranslation") {
+    public static final FloatProperty<AllAppsTransitionController> ALL_APPS_PULL_BACK_TRANSLATION = new FloatProperty<AllAppsTransitionController>(
+            "allAppsPullBackTranslation") {
 
-                @Override
-                public Float get(AllAppsTransitionController controller) {
-                    if (controller.mShouldShowAllAppsOnSheet) {
-                        return controller.mAppsView.getActiveRecyclerView().getTranslationY();
-                    } else {
-                        return controller.getAppsViewPullbackTranslationY().getValue();
-                    }
-                }
+        @Override
+        public Float get(AllAppsTransitionController controller) {
+            if (controller.mShouldShowAllAppsOnSheet) {
+                return controller.mAppsView.getActiveRecyclerView().getTranslationY();
+            } else {
+                return controller.getAppsViewPullbackTranslationY().getValue();
+            }
+        }
 
-                @Override
-                public void setValue(AllAppsTransitionController controller, float translation) {
-                    if (controller.mShouldShowAllAppsOnSheet) {
-                        controller.mAppsView.getActiveRecyclerView().setTranslationY(translation);
-                        controller.getAppsViewPullbackTranslationY().setValue(
-                                ALL_APPS_PULL_BACK_TRANSLATION_DEFAULT);
-                    } else {
-                        controller.getAppsViewPullbackTranslationY().setValue(translation);
-                        controller.mAppsView.getActiveRecyclerView().setTranslationY(
-                                ALL_APPS_PULL_BACK_TRANSLATION_DEFAULT);
-                    }
-                }
-            };
+        @Override
+        public void setValue(AllAppsTransitionController controller, float translation) {
+            if (controller.mShouldShowAllAppsOnSheet) {
+                controller.mAppsView.getActiveRecyclerView().setTranslationY(translation);
+                controller.getAppsViewPullbackTranslationY().setValue(
+                        ALL_APPS_PULL_BACK_TRANSLATION_DEFAULT);
+            } else {
+                controller.getAppsViewPullbackTranslationY().setValue(translation);
+                controller.mAppsView.getActiveRecyclerView().setTranslationY(
+                        ALL_APPS_PULL_BACK_TRANSLATION_DEFAULT);
+            }
+        }
+    };
 
     private static final float ALL_APPS_PULL_BACK_ALPHA_DEFAULT = 1f;
 
-    public static final FloatProperty<AllAppsTransitionController> ALL_APPS_PULL_BACK_ALPHA =
-            new FloatProperty<AllAppsTransitionController>("allAppsPullBackAlpha") {
+    public static final FloatProperty<AllAppsTransitionController> ALL_APPS_PULL_BACK_ALPHA = new FloatProperty<AllAppsTransitionController>(
+            "allAppsPullBackAlpha") {
 
-                @Override
-                public Float get(AllAppsTransitionController controller) {
-                    if (controller.mShouldShowAllAppsOnSheet) {
-                        return controller.mAppsView.getActiveRecyclerView().getAlpha();
-                    } else {
-                        return controller.getAppsViewPullbackAlpha().getValue();
-                    }
-                }
+        @Override
+        public Float get(AllAppsTransitionController controller) {
+            if (controller.mShouldShowAllAppsOnSheet) {
+                return controller.mAppsView.getActiveRecyclerView().getAlpha();
+            } else {
+                return controller.getAppsViewPullbackAlpha().getValue();
+            }
+        }
 
-                @Override
-                public void setValue(AllAppsTransitionController controller, float alpha) {
-                    if (controller.mShouldShowAllAppsOnSheet) {
-                        controller.mAppsView.getActiveRecyclerView().setAlpha(alpha);
-                        controller.getAppsViewPullbackAlpha().setValue(
-                                ALL_APPS_PULL_BACK_ALPHA_DEFAULT);
-                    } else {
-                        controller.getAppsViewPullbackAlpha().setValue(alpha);
-                        controller.mAppsView.getActiveRecyclerView().setAlpha(
-                                ALL_APPS_PULL_BACK_ALPHA_DEFAULT);
-                    }
-                }
-            };
+        @Override
+        public void setValue(AllAppsTransitionController controller, float alpha) {
+            if (controller.mShouldShowAllAppsOnSheet) {
+                controller.mAppsView.getActiveRecyclerView().setAlpha(alpha);
+                controller.getAppsViewPullbackAlpha().setValue(
+                        ALL_APPS_PULL_BACK_ALPHA_DEFAULT);
+            } else {
+                controller.getAppsViewPullbackAlpha().setValue(alpha);
+                controller.mAppsView.getActiveRecyclerView().setAlpha(
+                        ALL_APPS_PULL_BACK_ALPHA_DEFAULT);
+            }
+        }
+    };
 
     private static final int INDEX_APPS_VIEW_PROGRESS = 0;
     private static final int INDEX_APPS_VIEW_PULLBACK = 1;
@@ -169,19 +171,21 @@ public class AllAppsTransitionController
     private final AnimatedFloat mAllAppScale = new AnimatedFloat(this::onScaleProgressChanged);
     private final int mNavScrimFlag;
 
-    @Nullable private Animator.AnimatorListener mAllAppsSearchBackAnimationListener;
+    @Nullable
+    private Animator.AnimatorListener mAllAppsSearchBackAnimationListener;
 
     private boolean mIsVerticalLayout;
     private boolean mShouldShowAllAppsOnSheet;
 
     // Animation in this class is controlled by a single variable {@link mProgress}.
-    // Visually, it represents top y coordinate of the all apps container if multiplied with
+    // Visually, it represents top y coordinate of the all apps container if
+    // multiplied with
     // {@link mShiftRange}.
 
     // When {@link mProgress} is 0, all apps container is pulled up.
     // When {@link mProgress} is 1, all apps container is pulled down.
-    private float mShiftRange;      // changes depending on the orientation
-    private float mProgress;        // [0, 1], mShiftRange * mProgress = shiftCurrent
+    private float mShiftRange; // changes depending on the orientation
+    private float mProgress; // [0, 1], mShiftRange * mProgress = shiftCurrent
 
     private ScrimView mScrimView;
 
@@ -190,7 +194,8 @@ public class AllAppsTransitionController
 
     private boolean mHasScaleEffect;
     private final MSDLPlayerWrapper mMSDLPlayerWrapper;
-    // Indicates whether this transition should scale the allapps header in addition to its content.
+    // Indicates whether this transition should scale the allapps header in addition
+    // to its content.
     private boolean mShouldScaleHeader;
 
     public AllAppsTransitionController(Launcher l) {
@@ -200,7 +205,8 @@ public class AllAppsTransitionController
         mIsVerticalLayout = dp.isVerticalBarLayout();
         mShouldShowAllAppsOnSheet = dp.shouldShowAllAppsOnSheet();
         mNavScrimFlag = Themes.getAttrBoolean(l, R.attr.isMainColorDark)
-                ? FLAG_DARK_NAV : FLAG_LIGHT_NAV;
+                ? FLAG_DARK_NAV
+                : FLAG_LIGHT_NAV;
 
         setShiftRange(dp.allAppsShiftRange);
         mAllAppScale.value = 1;
@@ -226,24 +232,58 @@ public class AllAppsTransitionController
     }
 
     /**
-     * Note this method should not be called outside this class. This is public because it is used
+     * Note this method should not be called outside this class. This is public
+     * because it is used
      * in xml-based animations which also handle updating the appropriate UI.
      *
      * @param progress value between 0 and 1, 0 shows all apps and 1 shows workspace
      * @see #setState(LauncherState)
-     * @see #setStateWithAnimation(LauncherState, StateAnimationConfig, PendingAnimation)
+     * @see #setStateWithAnimation(LauncherState, StateAnimationConfig,
+     *      PendingAnimation)
      */
     public void setProgress(float progress) {
         mProgress = progress;
+
         boolean fromBackground =
                 mLauncher.getStateManager().getCurrentStableState() == BACKGROUND_APP;
-        // Allow apps panel to shift the full screen if coming from another app.
-        float shiftRange = fromBackground ? mLauncher.getDeviceProfile().getDeviceProperties().getHeightPx() : mShiftRange;
+
+        float shiftRange = fromBackground
+                ? mLauncher.getDeviceProfile().getDeviceProperties().getHeightPx()
+                : mShiftRange;
+
+        // Core translation (keep intact)
         getAppsViewProgressTranslationY().setValue(mProgress * shiftRange);
+
         mLauncher.onAllAppsTransition(1 - progress);
+
+        // Prevent conflict with system gesture
+        if (!fromBackground) {
+
+            // iOS-like smooth scale transition with ease-out quad curve
+            // Eased progress: 1 - (1-t)^2 for smooth acceleration
+            float easeProgress = 1f - ((1f - progress) * (1f - progress));
+
+            // Subtle scale transition: 0.98-1.0 range (refined from 0.04f to 0.02f)
+            float scale = 1f - (0.02f * (1f - easeProgress));
+            mAppsView.setScaleX(scale);
+            mAppsView.setScaleY(scale);
+
+            // Refined workspace fade: more responsive, keeps workspace visible
+            // Range: 0.87-1.0 (workspace remains visible while dimmed)
+            float alphaScale = 0.87f + (0.13f * easeProgress);
+            mLauncher.getWorkspace().setAlpha(alphaScale);
+        }
+
+        // Proper reset when closed
+        if (progress == 0f) {
+            mAppsView.setScaleX(1f);
+            mAppsView.setScaleY(1f);
+            mLauncher.getWorkspace().setAlpha(1f);
+        }
 
         boolean hasScrim = progress < NAV_BAR_COLOR_FORCE_UPDATE_THRESHOLD
                 && mLauncher.getAppsView().getNavBarScrimHeight() > 0;
+
         mLauncher.getSystemUiController().updateUiState(
                 UI_STATE_ALL_APPS, hasScrim ? mNavScrimFlag : 0);
     }
@@ -269,7 +309,8 @@ public class AllAppsTransitionController
     }
 
     /**
-     * Sets the vertical transition progress to {@param state} and updates all the dependent UI
+     * Sets the vertical transition progress to {@param state} and updates all the
+     * dependent UI
      * accordingly.
      */
     @Override
@@ -292,7 +333,7 @@ public class AllAppsTransitionController
 
         float scaleProgress = ScrollableLayoutManager.PREDICTIVE_BACK_MIN_SCALE
                 + (1 - ScrollableLayoutManager.PREDICTIVE_BACK_MIN_SCALE)
-                * (1 - backProgress);
+                        * (1 - backProgress);
 
         mAllAppScale.updateValue(scaleProgress);
     }
@@ -307,9 +348,12 @@ public class AllAppsTransitionController
 
         AllAppsRecyclerView rv = mLauncher.getAppsView().getActiveRecyclerView();
 
-        // Disable view clipping from all apps' RecyclerView up to all apps view during scale
-        // animation, and vice versa. The goal is to display extra roll(s) app icons (rendered in
-        // {@link AppsGridLayoutManager#calculateExtraLayoutSpace}) during scale animation.
+        // Disable view clipping from all apps' RecyclerView up to all apps view during
+        // scale
+        // animation, and vice versa. The goal is to display extra roll(s) app icons
+        // (rendered in
+        // {@link AppsGridLayoutManager#calculateExtraLayoutSpace}) during scale
+        // animation.
         boolean hasScaleEffect = scaleProgress < 1f;
         if (hasScaleEffect != mHasScaleEffect) {
             mHasScaleEffect = hasScaleEffect;
@@ -324,7 +368,8 @@ public class AllAppsTransitionController
     }
 
     /**
-     * @return AnimatedFloat for all apps scale. This will scale the allapps content by default.
+     * @return AnimatedFloat for all apps scale. This will scale the allapps content
+     *         by default.
      * @see #setShouldScaleHeader(boolean)
      */
     public AnimatedFloat getAllAppScale() {
@@ -332,19 +377,24 @@ public class AllAppsTransitionController
     }
 
     /**
-     * Specify whether this transition should scale the allapps header in addition to its content.
+     * Specify whether this transition should scale the allapps header in addition
+     * to its content.
      */
     public void setShouldScaleHeader(boolean shouldScaleHeader) {
         mShouldScaleHeader = shouldScaleHeader;
     }
 
-    /** Set {@link Animator.AnimatorListener} for scaling all apps scale to 1 animation. */
+    /**
+     * Set {@link Animator.AnimatorListener} for scaling all apps scale to 1
+     * animation.
+     */
     public void setAllAppsSearchBackAnimationListener(Animator.AnimatorListener listener) {
         mAllAppsSearchBackAnimationListener = listener;
     }
 
     /**
-     * Animate all apps view to 1f scale. This is called when backing (exiting) from all apps
+     * Animate all apps view to 1f scale. This is called when backing (exiting) from
+     * all apps
      * search view to all apps view.
      */
     public void animateAllAppsToNoScale() {
@@ -360,12 +410,16 @@ public class AllAppsTransitionController
     }
 
     /**
-     * Creates an animation which updates the vertical transition progress and updates all the
+     * Creates an animation which updates the vertical transition progress and
+     * updates all the
      * dependent UI using various animation events
      *
-     * This method also dictates where along the progress the haptics should be played. As the user
-     * scrolls up from workspace or down from AllApps, a drag haptic is being played until the
-     * commit point where it plays a commit haptic. Where we play the haptics differs when going
+     * This method also dictates where along the progress the haptics should be
+     * played. As the user
+     * scrolls up from workspace or down from AllApps, a drag haptic is being played
+     * until the
+     * commit point where it plays a commit haptic. Where we play the haptics
+     * differs when going
      * from workspace -> allApps and vice versa.
      */
     @Override

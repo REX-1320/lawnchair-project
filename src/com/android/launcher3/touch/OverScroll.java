@@ -20,7 +20,8 @@ package com.android.launcher3.touch;
  */
 public class OverScroll {
 
-    public static final float OVERSCROLL_DAMP_FACTOR = 0.07f;
+    // iOS-like edge resistance: refined damping for natural rubber-band feel (increased from 0.07f)
+    public static final float OVERSCROLL_DAMP_FACTOR = 0.09f;
 
     /**
      * This curve determines how the effect of scrolling over the limits of the page diminishes
