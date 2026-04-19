@@ -130,7 +130,7 @@ import javax.inject.Provider;
 public class LoaderTask implements Runnable {
     private static final String TAG = "LoaderTask";
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private final Context mContext;
     private final LauncherModel mModel;

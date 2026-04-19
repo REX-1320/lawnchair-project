@@ -56,7 +56,7 @@ public class StateManager<S extends BaseState<S>, T extends StatefulContainer<S>
 
     public static final String TAG = "StateManager";
     // b/279059025, b/325463989
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private final AnimationState<S> mConfig = new AnimationState<>();
     private final Handler mUiHandler;

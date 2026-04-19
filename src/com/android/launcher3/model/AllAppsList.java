@@ -71,7 +71,7 @@ public class AllAppsList {
 
     private static final String TAG = "AllAppsList";
     private static final Consumer<AppInfo> NO_OP_CONSUMER = a -> { };
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     public static final int DEFAULT_APPLICATIONS_NUMBER = 42;
 

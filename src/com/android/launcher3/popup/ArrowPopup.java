@@ -269,7 +269,6 @@ public abstract class ArrowPopup<T extends Context & ActivityContext>
 
                 if (isShortcutOrWrapper(view)) {
                     if (totalVisibleShortcuts == 1) {
-                        // Lawnchair-TODO-High: view.setBackgroundResource is use instead
                         view.setBackground(DrawableTokens.SingleItemPrimary.resolve(getContext()));
                     } else if (totalVisibleShortcuts > 1) {
                         if (numVisibleShortcut == 0) {

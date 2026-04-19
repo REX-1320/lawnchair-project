@@ -73,7 +73,7 @@ import java.util.stream.Collectors;
 public class GridSizeMigrationDBController {
 
     private static final String TAG = "GridSizeMigrationDBController";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private GridSizeMigrationDBController() {
         // Util class should not be instantiated

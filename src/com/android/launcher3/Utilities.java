@@ -167,22 +167,6 @@ public final class Utilities {
     public static final int EDGE_NAV_BAR = 1 << 8;
 
     /**
-     * Indicates if the device has a debug build. Should only be used to store additional info or
-     * add extra logging and not for changing the app behavior.
-     * @deprecated Use {@link BuildConfig#IS_DEBUG_DEVICE} directly
-     */
-    @Deprecated
-    public static final boolean IS_DEBUG_DEVICE = BuildConfigs.IS_DEBUG_DEVICE;
-
-    public static final int TRANSLATE_UP = 0;
-    public static final int TRANSLATE_DOWN = 1;
-    public static final int TRANSLATE_LEFT = 2;
-    public static final int TRANSLATE_RIGHT = 3;
-
-    @IntDef({TRANSLATE_UP, TRANSLATE_DOWN, TRANSLATE_LEFT, TRANSLATE_RIGHT})
-    public @interface AdjustmentDirection{}
-
-    /**
      * Returns true if theme is dark.
      */
     public static boolean isDarkTheme(Context context) {

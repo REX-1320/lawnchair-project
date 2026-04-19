@@ -14,7 +14,7 @@ import java.util.Locale;
 public class AlphabeticIndexCompat {
 
     // TODO(b/336947811): Set to false after root causing is done.
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final String TAG = "AlphabeticIndexCompat";
     private static final String MID_DOT = "\u2219";
     private final String mDefaultMiscLabel;

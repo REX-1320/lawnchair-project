@@ -43,13 +43,6 @@ public final class FeatureFlags {
     private FeatureFlags() { }
 
     /**
-     * True when the build has come from Android Studio and is being used for local debugging.
-     * @deprecated Use {@link BuildConfig#IS_STUDIO_BUILD} directly
-     */
-    @Deprecated
-    public static final boolean IS_STUDIO_BUILD = false;
-
-    /**
      * Feature flag to handle define config changes dynamically instead of killing the process.
      * <p>
      *

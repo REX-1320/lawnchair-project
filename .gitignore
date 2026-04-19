@@ -20,3 +20,10 @@ __pycache__
 .vscode
 .fleet
 lawnWithQuickstep/release
+*.backup
+*.tmp
+.gradle/configuration-cache/
+.gradle/buildOutputCleanup/
+*.swp
+*.swo
+*~
