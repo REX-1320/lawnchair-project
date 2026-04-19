@@ -87,20 +87,6 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
 
         pluginManager.addPluginListener(this, CustomWidgetPlugin.class, true);
         tracker.addCloseable(() -> pluginManager.removePluginListener(this));
-
-        // Register built-in custom widgets
-        registerBuiltInCustomWidgets(context);
-    }
-
-    private void registerBuiltInCustomWidgets(Context context) {
-        // Add Music Pro widget
-        try {
-            MusicWidgetProvider.getWidgetInfo(context)
-                    .initSpans(context, com.android.launcher3.LauncherAppState.getIDP(context));
-            mCustomWidgets.add(MusicWidgetProvider.getWidgetInfo(context));
-        } catch (Exception e) {
-            // Safe: widget registration failure won't crash launcher
-        }
     }
 
     @Override
@@ -160,6 +146,18 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
      */
     @Nullable
     public LauncherAppWidgetProviderInfo getWidgetProvider(ComponentName cn) {
+        // Handle built-in Music Pro widget on-demand
+        if (cn.equals(MusicWidgetProvider.COMPONENT_NAME)) {
+            try {
+                CustomAppWidgetProviderInfo info = MusicWidgetProvider.getWidgetInfo(mContext);
+                info.initSpans(mContext, com.android.launcher3.LauncherAppState.getIDP(mContext));
+                return info;
+            } catch (Exception e) {
+                // Safe: widget creation failure returns null
+                return null;
+            }
+        }
+
         LauncherAppWidgetProviderInfo info = mCustomWidgets.stream()
                 .filter(w -> w.getComponent().equals(cn)).findAny().orElse(null);
         if (info == null) {
