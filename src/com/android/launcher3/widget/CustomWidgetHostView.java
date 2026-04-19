@@ -23,6 +23,7 @@ import android.widget.FrameLayout;
 
 import com.android.launcher3.model.data.LauncherAppWidgetInfo;
 import com.android.launcher3.widget.custom.CustomAppWidgetProviderInfo;
+import com.android.launcher3.widget.custom.MusicWidgetProvider;
 
 /**
  * Host view wrapper for custom widgets that use Java views instead of RemoteViews.

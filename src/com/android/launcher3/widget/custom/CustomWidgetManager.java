@@ -95,9 +95,9 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
     private void registerBuiltInCustomWidgets(Context context) {
         // Add Music Pro widget
         try {
-            com.android.launcher3.widget.MusicWidgetProvider.getWidgetInfo(context)
+            MusicWidgetProvider.getWidgetInfo(context)
                     .initSpans(context, com.android.launcher3.LauncherAppState.getIDP(context));
-            mCustomWidgets.add(com.android.launcher3.widget.MusicWidgetProvider.getWidgetInfo(context));
+            mCustomWidgets.add(MusicWidgetProvider.getWidgetInfo(context));
         } catch (Exception e) {
             // Safe: widget registration failure won't crash launcher
         }

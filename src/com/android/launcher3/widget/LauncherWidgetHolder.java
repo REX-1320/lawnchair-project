@@ -513,7 +513,7 @@ public class LauncherWidgetHolder {
                 // Handle custom widgets (Music Pro, etc.) that use Java views instead of RemoteViews
                 if (appWidgetId <= com.android.launcher3.model.data.LauncherAppWidgetInfo.CUSTOM_WIDGET_ID
                         && appWidget instanceof com.android.launcher3.widget.custom.CustomAppWidgetProviderInfo
-                        && appWidget.provider.equals(com.android.launcher3.widget.MusicWidgetProvider.COMPONENT_NAME)) {
+                        && appWidget.provider.equals(com.android.launcher3.widget.custom.MusicWidgetProvider.COMPONENT_NAME)) {
                     com.android.launcher3.widget.CustomWidgetHostView customView =
                             new com.android.launcher3.widget.CustomWidgetHostView(mContext);
                     customView.setAppWidget(appWidgetId, appWidget);

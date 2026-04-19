@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.android.launcher3.widget;
+package com.android.launcher3.widget.custom;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.Parcel;
-
-import com.android.launcher3.R;
-import com.android.launcher3.widget.custom.CustomAppWidgetProviderInfo;
 
 /**
  * Built-in custom widget provider for Music Pro widget.
