@@ -20,6 +20,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.UserHandle;
 
 import androidx.annotation.VisibleForTesting;
 
@@ -65,6 +66,15 @@ public class CustomAppWidgetProviderInfo extends LauncherAppWidgetProviderInfo
     @Override
     public CharSequence getLabel() {
         return Utilities.trim(label);
+    }
+
+    @Override
+    public UserHandle getProfile() {
+        // Custom widgets may not have valid applicationInfo, return current user
+        if (applicationInfo == null) {
+            return android.os.Process.myUserHandle();
+        }
+        return super.getProfile();
     }
 
     @Override
