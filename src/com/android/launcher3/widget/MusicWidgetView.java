@@ -109,7 +109,7 @@ public class MusicWidgetView extends FrameLayout {
                         mMediaController = controllers.get(0);
                     }
                 }
-            } catch (SecurityException | RuntimeException e) {
+            } catch (RuntimeException e) {
                 // Safe: permissions may not be granted
             }
         }
