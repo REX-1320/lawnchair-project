@@ -1494,7 +1494,7 @@ public class Launcher extends StatefulActivity<LauncherState>
         launcherInfo.spanY = itemInfo.spanY;
         launcherInfo.minSpanX = itemInfo.minSpanX;
         launcherInfo.minSpanY = itemInfo.minSpanY;
-        launcherInfo.user = appWidgetInfo.getProfile();
+        launcherInfo.user = appWidgetInfo.getUser();
         CellPos presenterPos = getCellPosMapper().mapModelToPresenter(itemInfo);
         if (showPendingWidget) {
             launcherInfo.restoreStatus = LauncherAppWidgetInfo.FLAG_UI_NOT_READY;

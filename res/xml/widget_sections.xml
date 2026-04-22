@@ -30,8 +30,9 @@
     </section>
     <section
         launcher:category="2"
-        launcher:sectionDrawable="@android:drawable/ic_media_play"
+        launcher:sectionDrawable="@android:drawable/ic_menu_sort_by_size"
         launcher:sectionTitle="@string/widget_category_rex_debug">
-        <widget launcher:provider="android/#custom-widget-music-pro" />
+        <widget launcher:provider="android/#custom-widget-stack-pro" />
+        <widget launcher:provider="android/#custom-widget-test" />
     </section>
 </widget-sections>

@@ -18,14 +18,19 @@ package com.android.launcher3.widget.custom;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.Process;
 
 import androidx.annotation.VisibleForTesting;
 
 import com.android.launcher3.InvariantDeviceProfile;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
+
+import java.lang.reflect.Field;
 
 /**
  * Custom app widget provider info that can be used as a widget, but provide extra functionality
@@ -34,11 +39,13 @@ import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
 public class CustomAppWidgetProviderInfo extends LauncherAppWidgetProviderInfo
         implements Parcelable {
 
-    protected CustomAppWidgetProviderInfo(Parcel parcel, boolean readSelf) {
+    public CustomAppWidgetProviderInfo(Parcel parcel, boolean readSelf) {
         super(parcel);
         if (readSelf) {
-            provider = new ComponentName(parcel.readString(),
-                    CLS_CUSTOM_WIDGET_PREFIX + parcel.readString());
+            String pkg = parcel.readString();
+            String cls = parcel.readString();
+            provider = new ComponentName(pkg, cls.startsWith(CLS_CUSTOM_WIDGET_PREFIX)
+                    ? cls : CLS_CUSTOM_WIDGET_PREFIX + cls);
 
             label = parcel.readString();
             initialLayout = parcel.readInt();
@@ -51,13 +58,15 @@ public class CustomAppWidgetProviderInfo extends LauncherAppWidgetProviderInfo
             minSpanX = parcel.readInt();
             minSpanY = parcel.readInt();
         }
+        setupProviderInfo();
     }
 
     @VisibleForTesting
-    CustomAppWidgetProviderInfo() {}
+    public CustomAppWidgetProviderInfo() {}
 
     @Override
     public void initSpans(Context context, InvariantDeviceProfile idp) {
+        super.initSpans(context, idp);
         mIsMinSizeFulfilled = Math.min(spanX, minSpanX) <= idp.numColumns
                 && Math.min(spanY, minSpanY) <= idp.numRows;
     }
@@ -65,6 +74,43 @@ public class CustomAppWidgetProviderInfo extends LauncherAppWidgetProviderInfo
     @Override
     public CharSequence getLabel() {
         return Utilities.trim(label);
+    }
+
+    @Override
+    public ActivityInfo getActivityInfo() {
+        ActivityInfo ai = new ActivityInfo();
+        ai.applicationInfo = getApplicationInfo();
+        ai.packageName = provider.getPackageName();
+        ai.name = provider.getClassName();
+        return ai;
+    }
+
+    @Override
+    public ApplicationInfo getApplicationInfo() {
+        // Create synthetic ApplicationInfo for custom widgets
+        // Note: Don't call super.getApplicationInfo() as it may call getActivityInfo()
+        // which in turn calls this method, creating infinite recursion
+        ApplicationInfo ai = new ApplicationInfo();
+        ai.packageName = provider.getPackageName();
+        ai.flags = ApplicationInfo.FLAG_INSTALLED;
+        ai.uid = Process.myUid();
+        return ai;
+    }
+
+    public void setupProviderInfo() {
+        if (provider == null) return;
+        try {
+            Field f = android.appwidget.AppWidgetProviderInfo.class.getDeclaredField("providerInfo");
+            f.setAccessible(true);
+            ActivityInfo activityInfo = getActivityInfo();
+            f.set(this, activityInfo);
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+            // Field may not exist or be accessible on some Android versions.
+            // The getActivityInfo() override will provide fallback values when getProfile() is called.
+        } catch (Exception e) {
+            // Catch other exceptions and log for debugging
+            android.util.Log.w("CustomAppWidgetProviderInfo", "Error setting providerInfo: " + e.getMessage());
+        }
     }
 
     @Override

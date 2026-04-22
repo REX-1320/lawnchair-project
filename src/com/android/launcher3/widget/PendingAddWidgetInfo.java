@@ -60,7 +60,7 @@ public class PendingAddWidgetInfo extends PendingAddItemInfo {
             itemType = LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET;
         }
         this.info = i;
-        user = i.getProfile();
+        user = i.getUser();
         componentName = i.provider;
         previewImage = i.previewImage;
         icon = i.icon;

@@ -297,12 +297,26 @@ public class WidgetCell extends LinearLayout {
     }
 
     private void applyPreview(WidgetPreviewInfo previewInfo) {
-        if (previewInfo.providerInfo != null) {
-            mAppWidgetHostViewPreview = createAppWidgetHostView(getContext());
-            setAppWidgetHostViewPreview(mAppWidgetHostViewPreview, previewInfo.providerInfo,
-                    previewInfo.remoteViews);
-        } else {
-            applyBitmapPreview(previewInfo.previewBitmap);
+        try {
+            if (previewInfo != null && previewInfo.providerInfo != null) {
+                mAppWidgetHostViewPreview = createAppWidgetHostView(getContext());
+                setAppWidgetHostViewPreview(mAppWidgetHostViewPreview, previewInfo.providerInfo,
+                        previewInfo.remoteViews);
+            } else {
+                Bitmap previewBitmap = previewInfo != null ? previewInfo.previewBitmap : null;
+                if (previewBitmap == null) {
+                    previewBitmap = mWidgetPreviewLoader.generatePlaceholderPreview(
+                            Math.max(1, mWidgetSize.getWidth()),
+                            Math.max(1, mWidgetSize.getHeight()));
+                }
+                applyBitmapPreview(previewBitmap);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to apply widget preview for: "
+                    + (mItem != null ? mItem.componentName : "unknown"), e);
+            applyBitmapPreview(mWidgetPreviewLoader.generatePlaceholderPreview(
+                    Math.max(1, mWidgetSize.getWidth()),
+                    Math.max(1, mWidgetSize.getHeight())));
         }
     }
 
@@ -331,6 +345,14 @@ public class WidgetCell extends LinearLayout {
             NavigableAppWidgetHostView appWidgetHostViewPreview,
             AppWidgetProviderInfo providerInfo,
             @Nullable RemoteViews remoteViews) {
+        if (providerInfo instanceof LauncherAppWidgetProviderInfo launcherInfo
+                && launcherInfo.isCustomWidget()) {
+            applyBitmapPreview(mWidgetPreviewLoader.generatePlaceholderPreview(
+                    Math.max(1, mWidgetSize.getWidth()),
+                    Math.max(1, mWidgetSize.getHeight())));
+            return;
+        }
+
         appWidgetHostViewPreview.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         appWidgetHostViewPreview.setAppWidget(/* appWidgetId= */ -1, providerInfo);
         appWidgetHostViewPreview.updateAppWidget(remoteViews);

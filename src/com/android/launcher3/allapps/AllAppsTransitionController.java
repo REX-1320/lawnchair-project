@@ -259,23 +259,24 @@ public class AllAppsTransitionController
         // Prevent conflict with system gesture
         if (!fromBackground) {
 
-            // Premium iOS-like animation: ease-out quad for smooth, responsive feel
-            // Eased progress: 1 - (1-t)^2 for natural acceleration
-            float easeProgress = 1f - ((1f - progress) * (1f - progress));
+            // Premium iOS-like animation: ease-out cubic (1-(1-t)^3) for snappier response
+            // More responsive than quad, faster entrance acceleration for premium feel
+            float easeProgress = 1f - ((1f - progress) * (1f - progress) * (1f - progress));
 
             // Scale transition: 0.96 → 1.0 (opening) / 1.0 → 0.96 (closing)
-            // Range: 0.04 scale variation for subtle but noticeable premium effect
-            float scale = 1f - (0.04f * (1f - easeProgress));
+            // Adjusted range: 0.045 scale variation for more pronounced, responsive effect
+            float scale = 1f - (0.045f * (1f - easeProgress));
             mAppsView.setScaleX(scale);
             mAppsView.setScaleY(scale);
 
-            // Dual-layer alpha for premium depth effect:
-            // AppsView: subtle fade in/out (0.98-1.0) for UI refinement
-            float appsAlpha = 0.98f + (0.02f * easeProgress);
+            // Dual-layer alpha for refined depth:
+            // AppsView: smooth fade in/out (0.97-1.0) for polished look
+            float appsAlpha = 0.97f + (0.03f * easeProgress);
             mAppsView.setAlpha(appsAlpha);
 
-            // Workspace: dim effect as drawer opens (0.85-1.0) for focus redirect
-            float workspaceAlpha = 0.85f + (0.15f * easeProgress);
+            // Workspace: dim effect as drawer opens (0.82-1.0) for improved focus redirect
+            // Increased dim range for better visual separation
+            float workspaceAlpha = 0.82f + (0.18f * easeProgress);
             mLauncher.getWorkspace().setAlpha(workspaceAlpha);
         }
 

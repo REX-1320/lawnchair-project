@@ -196,9 +196,10 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
         mIsRtl = Utilities.isRtl(getResources());
 
         // iOS-like smooth momentum scrolling with PathInterpolator (API 21+)
+        // Optimized curve: 0.25/0.9/0.35/1 for faster deceleration, responsive feel
         Interpolator scrollerInterpolator;
         try {
-            scrollerInterpolator = new PathInterpolator(0.17f, 0.67f, 0.83f, 1.0f);
+            scrollerInterpolator = new PathInterpolator(0.25f, 0.9f, 0.35f, 1f);
         } catch (NoClassDefFoundError e) {
             // Fallback for API < 21
             scrollerInterpolator = SCROLL;
@@ -1871,11 +1872,13 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
         velocity = Math.max(mMinSnapVelocity, velocity);
 
         // iOS-like responsive duration: adaptively scaled factor for smooth momentum
-        // Using 4.2 instead of 5 for snappier response while maintaining smoothness
-        // Duration range: 150ms-500ms for optimal user experience
-        float scaleFactor = 4.2f;
-        duration = Math.max(150, Math.min(500,
-                (int) (scaleFactor * Math.round(1000 * Math.abs(distance / velocity)))));
+        // Using 3.8 for better responsiveness on short distances, 500ms cap prevents sluggish long swipes
+        // Duration range: 180ms-320ms optimal for feel; min 150ms, max 500ms for safety bounds
+        float scaleFactor = 3.8f;
+        int baseDuration = (int) (scaleFactor * Math.round(1000 * Math.abs(distance / velocity)));
+        // Clamp with adaptive upper bound: longer swipes get slightly more time (up to 350ms)
+        int maxDuration = Math.min(500, 320 + (int)(20 * distanceRatio));
+        duration = Math.max(180, Math.min(maxDuration, baseDuration));
 
         return snapToPage(whichPage, delta, duration);
     }

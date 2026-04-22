@@ -26,6 +26,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Process;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -66,8 +67,14 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
     private final Context mContext;
     private final HashMap<ComponentName, CustomWidgetPlugin> mPlugins;
     private final List<CustomAppWidgetProviderInfo> mCustomWidgets;
+    private final HashMap<ComponentName, BuiltInCustomWidgetFactory> mBuiltInWidgets;
     private final List<Runnable> mWidgetRefreshCallbacks = new CopyOnWriteArrayList<>();
     private final @NonNull AppWidgetManager mAppWidgetManager;
+
+    private interface BuiltInCustomWidgetFactory {
+        CustomAppWidgetProviderInfo createInfo(Context context);
+        View createView(Context context);
+    }
 
     @Inject
     CustomWidgetManager(@ApplicationContext Context context, PluginManagerWrapper pluginManager,
@@ -84,22 +91,61 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
         mAppWidgetManager = widgetManager;
         mPlugins = new HashMap<>();
         mCustomWidgets = new ArrayList<>();
+        mBuiltInWidgets = new HashMap<>();
 
         pluginManager.addPluginListener(this, CustomWidgetPlugin.class, true);
         tracker.addCloseable(() -> pluginManager.removePluginListener(this));
 
-        // Register built-in custom widgets
+        android.util.Log.d(TAG, "CustomWidgetManager initialized");
         registerBuiltInCustomWidgets(context);
+        android.util.Log.d(TAG, "Built-in widgets registered. Total: " + mBuiltInWidgets.size());
     }
 
     private void registerBuiltInCustomWidgets(Context context) {
-        // Add Music Pro widget
+        BuiltInCustomWidgetFactory stackProFactory = new BuiltInCustomWidgetFactory() {
+            @Override
+            public CustomAppWidgetProviderInfo createInfo(Context context) {
+                return StackProWidgetProvider.getWidgetInfo(context);
+            }
+
+            @Override
+            public View createView(Context context) {
+                return StackProWidgetProvider.createView(context);
+            }
+        };
+        registerBuiltInWidget(StackProWidgetProvider.COMPONENT_NAME, stackProFactory, context);
+        registerBuiltInWidget(new ComponentName("android", "StackProWidgetProvider"), stackProFactory, context);
+
+        BuiltInCustomWidgetFactory testFactory = new BuiltInCustomWidgetFactory() {
+            @Override
+            public CustomAppWidgetProviderInfo createInfo(Context context) {
+                return TestWidgetProvider.getWidgetInfo(context);
+            }
+
+            @Override
+            public View createView(Context context) {
+                return TestWidgetProvider.createView(context);
+            }
+        };
+        registerBuiltInWidget(TestWidgetProvider.COMPONENT_NAME, testFactory, context);
+        registerBuiltInWidget(new ComponentName("android", "TestWidgetProvider"), testFactory, context);
+    }
+
+    private void registerBuiltInWidget(ComponentName componentName,
+            BuiltInCustomWidgetFactory factory, Context context) {
+        mBuiltInWidgets.put(componentName, factory);
+        android.util.Log.d(TAG, "Registering built-in widget: " + componentName.flattenToString());
         try {
-            CustomAppWidgetProviderInfo info = MusicWidgetProvider.getWidgetInfo(context);
-            info.initSpans(context, com.android.launcher3.LauncherAppState.getIDP(context));
-            mCustomWidgets.add(info);
+            CustomAppWidgetProviderInfo info = factory.createInfo(context);
+            if (info != null) {
+                info.initSpans(context, com.android.launcher3.LauncherAppState.getIDP(context));
+                mCustomWidgets.add(info);
+                android.util.Log.d(TAG, "Successfully registered widget: " + componentName + ", label: " + info.label);
+            } else {
+                android.util.Log.w(TAG, "Factory returned null info for widget: " + componentName);
+            }
         } catch (Exception e) {
-            // Safe: widget registration failure won't crash launcher
+            android.util.Log.w(TAG, "Failed to register custom widget: " + componentName, e);
         }
     }
 
@@ -140,7 +186,10 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
      * Callback method to inform a plugin it's corresponding widget has been created.
      */
     public void onViewCreated(LauncherAppWidgetHostView view) {
-        CustomAppWidgetProviderInfo info = (CustomAppWidgetProviderInfo) view.getAppWidgetInfo();
+        if (!(view.getAppWidgetInfo() instanceof CustomAppWidgetProviderInfo info)
+                || info.provider == null) {
+            return;
+        }
         CustomWidgetPlugin plugin = mPlugins.get(info.provider);
         if (plugin != null) {
             plugin.onViewCreated(view);
@@ -160,33 +209,98 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin> {
      */
     @Nullable
     public LauncherAppWidgetProviderInfo getWidgetProvider(ComponentName cn) {
-        // Handle built-in Music Pro widget on-demand
-        if (cn.equals(MusicWidgetProvider.COMPONENT_NAME)) {
+        android.util.Log.d(TAG, "getWidgetProvider called for: " + cn);
+        LauncherAppWidgetProviderInfo info = mCustomWidgets.stream()
+                .filter(w -> w.getComponent().equals(cn)).findAny().orElse(null);
+        if (info != null) {
+            android.util.Log.d(TAG, "Found widget in mCustomWidgets: " + cn);
+            return info;
+        }
+
+        android.util.Log.d(TAG, "Widget not in mCustomWidgets, checking mBuiltInWidgets");
+        BuiltInCustomWidgetFactory builtInFactory = mBuiltInWidgets.get(cn);
+        if (builtInFactory != null) {
             try {
-                CustomAppWidgetProviderInfo info = MusicWidgetProvider.getWidgetInfo(mContext);
-                info.initSpans(mContext, com.android.launcher3.LauncherAppState.getIDP(mContext));
-                return info;
+                android.util.Log.d(TAG, "Found built-in factory for: " + cn);
+                CustomAppWidgetProviderInfo builtInInfo = builtInFactory.createInfo(mContext);
+                if (builtInInfo != null) {
+                    builtInInfo.initSpans(mContext, com.android.launcher3.LauncherAppState.getIDP(mContext));
+                    mCustomWidgets.add(builtInInfo);
+                    android.util.Log.d(TAG, "Created built-in widget provider: " + cn);
+                    return builtInInfo;
+                } else {
+                    android.util.Log.e(TAG, "Built-in factory returned null info for: " + cn);
+                    return null;
+                }
             } catch (Exception e) {
-                // Safe: widget creation failure returns null
+                android.util.Log.w(TAG, "Failed to create built-in provider: " + cn, e);
                 return null;
             }
         }
 
-        LauncherAppWidgetProviderInfo info = mCustomWidgets.stream()
-                .filter(w -> w.getComponent().equals(cn)).findAny().orElse(null);
-        if (info == null) {
-            // If the info is not present, add a placeholder info since the
-            // plugin might get loaded later
-            info = getAndAddInfo(cn);
+        // If the info is not present, add a placeholder info since the
+        // plugin might get loaded later
+        android.util.Log.d(TAG, "No built-in factory found, creating placeholder for: " + cn);
+        return getAndAddInfo(cn);
+    }
+
+    @Nullable
+    public View createCustomWidgetView(@NonNull LauncherAppWidgetProviderInfo info,
+            @NonNull Context context) {
+        android.util.Log.d(TAG, "createCustomWidgetView called for: " + info.provider);
+        
+        if (info.provider == null) {
+            android.util.Log.e(TAG, "ERROR: createCustomWidgetView - provider is NULL for widget: " + info.label);
+            return null;
         }
-        return info;
+
+        android.util.Log.d(TAG, "Looking up factory for provider: " + info.provider.flattenToString());
+        BuiltInCustomWidgetFactory builtInFactory = mBuiltInWidgets.get(info.provider);
+        if (builtInFactory == null) {
+            android.util.Log.e(TAG, "ERROR: createCustomWidgetView - No factory registered for provider: " + info.provider.flattenToString());
+            android.util.Log.e(TAG, "Registered factories: " + mBuiltInWidgets.keySet());
+            return null;
+        }
+
+        try {
+            android.util.Log.d(TAG, "Creating view from factory for: " + info.provider);
+            View result = builtInFactory.createView(context);
+            if (result == null) {
+                android.util.Log.e(TAG, "ERROR: Factory returned null view for: " + info.provider);
+            } else {
+                android.util.Log.d(TAG, "Successfully created view for: " + info.provider);
+            }
+            return result;
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "EXCEPTION: Failed to create custom widget view: " + info.provider, e);
+            android.util.Log.e(TAG, "Stack trace:", e);
+            return null;
+        }
     }
 
     /**
      * Returns an id to set as the appWidgetId for a custom widget.
      */
     public int allocateCustomAppWidgetId(ComponentName componentName) {
-        return CUSTOM_WIDGET_ID - mCustomWidgets.indexOf(getWidgetProvider(componentName));
+        LauncherAppWidgetProviderInfo providerInfo = getWidgetProvider(componentName);
+        if (providerInfo == null) {
+            return CUSTOM_WIDGET_ID;
+        }
+
+        int index = -1;
+        for (int i = 0; i < mCustomWidgets.size(); i++) {
+            if (componentName.equals(mCustomWidgets.get(i).getComponent())) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0 && providerInfo instanceof CustomAppWidgetProviderInfo customInfo) {
+            mCustomWidgets.add(customInfo);
+            index = mCustomWidgets.size() - 1;
+        }
+
+        return CUSTOM_WIDGET_ID - index;
     }
 
     @Nullable

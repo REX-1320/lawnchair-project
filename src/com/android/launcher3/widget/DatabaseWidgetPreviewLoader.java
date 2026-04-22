@@ -109,32 +109,57 @@ public class DatabaseWidgetPreviewLoader {
             WidgetItem item, int previewWidth, int previewHeight) {
         WidgetPreviewInfo result = new WidgetPreviewInfo();
 
-        AppWidgetProviderInfo widgetInfo = item.widgetInfo;
-        if (BuildCompat.isAtLeastV() && Flags.enableGeneratedPreviews() && widgetInfo != null
-                && ((widgetInfo.generatedPreviewCategories & WIDGET_CATEGORY_HOME_SCREEN) != 0)) {
-            result.remoteViews = new WidgetManagerHelper(mContext)
-                    .loadGeneratedPreview(widgetInfo, WIDGET_CATEGORY_HOME_SCREEN);
-            if (result.remoteViews != null) {
-                result.providerInfo = widgetInfo;
+        try {
+            AppWidgetProviderInfo widgetInfo = item.widgetInfo;
+            if (BuildCompat.isAtLeastV() && Flags.enableGeneratedPreviews() && widgetInfo != null
+                    && ((widgetInfo.generatedPreviewCategories & WIDGET_CATEGORY_HOME_SCREEN) != 0)) {
+                result.remoteViews = new WidgetManagerHelper(mContext)
+                        .loadGeneratedPreview(widgetInfo, WIDGET_CATEGORY_HOME_SCREEN);
+                if (result.remoteViews != null) {
+                    result.providerInfo = widgetInfo;
+                }
             }
+
+            if (Utilities.ATLEAST_S) {
+                if (result.providerInfo == null && widgetInfo != null
+                        && widgetInfo.previewLayout != Resources.ID_NULL) {
+                    result.providerInfo = fromProviderInfo(mContext, widgetInfo.clone());
+                    // A hack to force the initial layout to be the preview layout since there is no API for
+                    // rendering a preview layout for work profile apps yet. For non-work profile layout, a
+                    // proper solution is to use RemoteViews(PackageName, LayoutId).
+                    result.providerInfo.initialLayout = item.widgetInfo.previewLayout;
+                }
+            }
+
+            if (result.providerInfo == null) {
+                // fallback to bitmap preview
+                result.previewBitmap = generatePreview(item, previewWidth, previewHeight);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to generate widget preview for: "
+                    + (item != null ? item.componentName : "unknown"), e);
+            result.providerInfo = null;
+            result.remoteViews = null;
         }
 
-        if (Utilities.ATLEAST_S) {
-            if (result.providerInfo == null && widgetInfo != null
-                    && widgetInfo.previewLayout != Resources.ID_NULL) {
-                result.providerInfo = fromProviderInfo(mContext, widgetInfo.clone());
-                // A hack to force the initial layout to be the preview layout since there is no API for
-                // rendering a preview layout for work profile apps yet. For non-work profile layout, a
-                // proper solution is to use RemoteViews(PackageName, LayoutId).
-                result.providerInfo.initialLayout = item.widgetInfo.previewLayout;
-            }
-        }
-
-        if (result.providerInfo == null) {
-            // fallback to bitmap preview
-            result.previewBitmap = generatePreview(item, previewWidth, previewHeight);
+        if (result.providerInfo == null && result.previewBitmap == null) {
+            result.previewBitmap = generatePlaceholderPreview(previewWidth, previewHeight);
         }
         return result;
+    }
+
+    public Bitmap generatePlaceholderPreview(int previewWidth, int previewHeight) {
+        int safeWidth = Math.max(1, previewWidth);
+        int safeHeight = Math.max(1, previewHeight);
+        return BitmapRenderer.createHardwareBitmap(safeWidth, safeHeight, c -> {
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.argb(30, 255, 255, 255));
+            float roundedCorner = mContext.getResources().getDimension(
+                    android.R.dimen.system_app_widget_background_radius);
+            c.drawRoundRect(new RectF(0, 0, safeWidth, safeHeight), roundedCorner, roundedCorner,
+                    paint);
+        });
     }
 
     /**
@@ -165,11 +190,18 @@ public class DatabaseWidgetPreviewLoader {
         Drawable drawable = null;
         if (info.previewImage != 0) {
             try {
-                drawable = info.loadPreviewImage(mContext, 0);
+                if (info.isCustomWidget()) {
+                    drawable = mContext.getDrawable(info.previewImage);
+                } else {
+                    drawable = info.loadPreviewImage(mContext, 0);
+                }
             } catch (OutOfMemoryError e) {
                 Log.w(TAG, "Error loading widget preview for: " + info.provider, e);
                 // During OutOfMemoryError, the previous heap stack is not affected. Catching
                 // an OOM error here should be safe & not affect other parts of launcher.
+                drawable = null;
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Error loading widget preview drawable for: " + info.provider, e);
                 drawable = null;
             }
             if (drawable != null) {
@@ -183,8 +215,8 @@ public class DatabaseWidgetPreviewLoader {
         }
 
         final boolean widgetPreviewExists = (drawable != null);
-        final int spanX = info.spanX;
-        final int spanY = info.spanY;
+        final int spanX = Math.max(1, info.spanX);
+        final int spanY = Math.max(1, info.spanY);
 
         int previewWidth;
         int previewHeight;

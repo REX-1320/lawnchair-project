@@ -170,19 +170,30 @@ public class WidgetsModel {
             // Widgets
             WidgetManagerHelper widgetManager = new WidgetManagerHelper(mContext);
             for (AppWidgetProviderInfo widgetInfo : widgetManager.getAllProviders(packageUser)) {
-                LauncherAppWidgetProviderInfo launcherWidgetInfo =
-                        LauncherAppWidgetProviderInfo.fromProviderInfo(mContext, widgetInfo);
+                try {
+                    LauncherAppWidgetProviderInfo launcherWidgetInfo =
+                            LauncherAppWidgetProviderInfo.fromProviderInfo(mContext, widgetInfo);
 
-                widgetsAndShortcuts.add(new WidgetItem(
-                        launcherWidgetInfo, mIdp, mIconCache, mContext));
-                updatedItems.add(launcherWidgetInfo);
+                    widgetsAndShortcuts.add(new WidgetItem(
+                            launcherWidgetInfo, mIdp, mIconCache, mContext));
+                    updatedItems.add(launcherWidgetInfo);
+                } catch (Exception e) {
+                    // Gracefully handle errors for individual widgets.
+                    android.util.Log.e("WidgetsModel", "Failed to load widget: " + widgetInfo, e);
+                    // Continue loading other widgets instead of crashing
+                }
             }
 
             // Shortcuts
             for (ShortcutConfigActivityInfo info :
                     queryList(mContext, packageUser)) {
-                widgetsAndShortcuts.add(new WidgetItem(info, mIconCache));
-                updatedItems.add(info);
+                try {
+                    widgetsAndShortcuts.add(new WidgetItem(info, mIconCache));
+                    updatedItems.add(info);
+                } catch (Exception e) {
+                    // Gracefully handle errors for individual shortcuts
+                    android.util.Log.e("WidgetsModel", "Failed to load shortcut: " + info, e);
+                }
             }
             setWidgetsAndShortcuts(widgetsAndShortcuts, packageUser);
         } catch (Exception e) {
@@ -192,7 +203,8 @@ public class WidgetsModel {
                 // TODO: after figuring out a repro step, introduce a dirty bit to check when
                 // onResume is called to refresh the widget provider list.
             } else {
-                throw e;
+                android.util.Log.e("WidgetsModel", "Error updating widgets", e);
+                // Don't re-throw; log and continue to prevent loader crash
             }
         }
 
@@ -222,6 +234,7 @@ public class WidgetsModel {
 
         // add and update.
         mWidgetsByPackageItem.putAll(rawWidgetsShortcuts.stream()
+            .filter(this::isValidWidgetItem)
                 .filter(new WidgetFlagCheck())
                 .flatMap(widgetItem -> getPackageUserKeys(mContext, widgetItem).stream()
                         .map(key -> new Pair<>(packageItemInfoCache.getOrCreate(key), widgetItem)))
@@ -231,6 +244,16 @@ public class WidgetsModel {
         for (PackageItemInfo p : packageItemInfoCache.values()) {
             mIconCache.getTitleAndIconForApp(p, DEFAULT_LOOKUP_FLAG.withUseLowRes());
         }
+    }
+
+    private boolean isValidWidgetItem(@Nullable WidgetItem item) {
+        if (item == null || item.componentName == null || item.user == null) {
+            return false;
+        }
+        if (item.label == null || item.label.trim().isEmpty()) {
+            return false;
+        }
+        return item.spanX >= 1 && item.spanY >= 1;
     }
 
     public void onPackageIconsUpdated(Set<String> packageNames, UserHandle user) {

@@ -2,6 +2,7 @@ package com.android.launcher3.model;
 
 import static com.android.launcher3.Utilities.ATLEAST_S;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 
@@ -20,6 +21,9 @@ import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
  */
 public class WidgetItem extends ComponentKey {
 
+    private static final ComponentName FALLBACK_COMPONENT = new ComponentName(
+            "android", LauncherAppWidgetProviderInfo.CLS_CUSTOM_WIDGET_PREFIX + "fallback");
+
     public final LauncherAppWidgetProviderInfo widgetInfo;
     public final ShortcutConfigActivityInfo activityInfo;
 
@@ -30,30 +34,74 @@ public class WidgetItem extends ComponentKey {
 
     public WidgetItem(LauncherAppWidgetProviderInfo info,
             InvariantDeviceProfile idp, IconCache iconCache, Context context) {
-        super(info.provider, getProfileSafe(info));
+        super(getComponentSafe(info), getProfileSafe(info));
 
-        label = iconCache.getTitleNoCache(info);
+        sanitizeWidgetInfo(info, idp);
+
+        label = getTitleSafe(iconCache, info);
         description = ATLEAST_S && info.loadDescription(context) != null ? info.loadDescription(context) : "";
         widgetInfo = info;
         activityInfo = null;
 
-        spanX = Math.min(info.spanX, idp.numColumns);
-        spanY = Math.min(info.spanY, idp.numRows);
+        spanX = Math.max(1, Math.min(info.spanX, idp.numColumns));
+        spanY = Math.max(1, Math.min(info.spanY, idp.numRows));
+    }
+
+    private static ComponentName getComponentSafe(LauncherAppWidgetProviderInfo info) {
+        return info.provider != null ? info.provider : FALLBACK_COMPONENT;
+    }
+
+    private static void sanitizeWidgetInfo(LauncherAppWidgetProviderInfo info,
+            InvariantDeviceProfile idp) {
+        if (info.provider == null) {
+            info.provider = FALLBACK_COMPONENT;
+        }
+        if (info.spanX < 1) {
+            info.spanX = 1;
+        }
+        if (info.spanY < 1) {
+            info.spanY = 1;
+        }
+        info.spanX = Math.min(info.spanX, idp.numColumns);
+        info.spanY = Math.min(info.spanY, idp.numRows);
+        info.minSpanX = Math.max(1, info.minSpanX);
+        info.minSpanY = Math.max(1, info.minSpanY);
+        if (info.label == null || info.label.trim().isEmpty()) {
+            info.label = "Widget";
+        }
     }
 
     private static android.os.UserHandle getProfileSafe(LauncherAppWidgetProviderInfo info) {
         try {
-            return info.getProfile();
-        } catch (NullPointerException e) {
-            // Custom widgets (e.g., Music Pro) may have null applicationInfo
+            return info.getUser();
+        } catch (Exception e) {
+            // Catch any exception from getUser() as last resort fallback
             return android.os.Process.myUserHandle();
+        }
+    }
+
+    private static String getTitleSafe(IconCache iconCache, LauncherAppWidgetProviderInfo info) {
+        try {
+            String title = iconCache.getTitleNoCache(info);
+            if (title == null || title.trim().isEmpty()) {
+                return info.label != null && !info.label.trim().isEmpty() ? info.label : "Widget";
+            }
+            return title;
+        } catch (Exception e) {
+            // Custom widgets may have null applicationInfo or other issues
+            // Fall back to widget label
+            return info.label != null && !info.label.trim().isEmpty() ? info.label : "Widget";
         }
     }
 
     public WidgetItem(ShortcutConfigActivityInfo info, IconCache iconCache) {
         super(info.getComponent(), info.getUser());
-        label = info.isPersistable() ? iconCache.getTitleNoCache(info) :
-                Utilities.trim(info.getLabel());
+        String shortcutLabel = info.isPersistable()
+            ? iconCache.getTitleNoCache(info)
+            : Utilities.trim(info.getLabel());
+        label = shortcutLabel == null || shortcutLabel.trim().isEmpty()
+            ? "Shortcut"
+            : shortcutLabel;
         description = null;
         widgetInfo = null;
         activityInfo = info;

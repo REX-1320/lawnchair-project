@@ -11,6 +11,7 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Parcel;
+import android.os.Process;
 import android.os.UserHandle;
 
 import androidx.annotation.Nullable;
@@ -216,7 +217,13 @@ public class LauncherAppWidgetProviderInfo extends AppWidgetProviderInfo impleme
     }
 
     public boolean isCustomWidget() {
-        return provider.getClassName().startsWith(CLS_CUSTOM_WIDGET_PREFIX);
+        if (provider == null || provider.getClassName() == null) {
+            return false;
+        }
+        String cls = provider.getClassName();
+        return cls.startsWith(CLS_CUSTOM_WIDGET_PREFIX) ||
+               cls.equals("TestWidgetProvider") ||
+               cls.equals("StackProWidgetProvider");
     }
 
     public int getWidgetFeatures() {
@@ -240,7 +247,16 @@ public class LauncherAppWidgetProviderInfo extends AppWidgetProviderInfo impleme
 
     @Override
     public final UserHandle getUser() {
-        return getProfile();
+        try {
+            return getProfile();
+        } catch (NullPointerException e) {
+            // Custom widgets may have null applicationInfo/providerInfo
+            ApplicationInfo appInfo = getApplicationInfo();
+            if (appInfo != null) {
+                return UserHandle.getUserHandleForUid(appInfo.uid);
+            }
+            return Process.myUserHandle();
+        }
     }
 
     @Override

@@ -35,6 +35,8 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 import android.util.SparseArray;
+import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -423,13 +425,15 @@ public class LauncherWidgetHolder {
     @NonNull
     public AppWidgetHostView createView(
             int appWidgetId, @NonNull LauncherAppWidgetProviderInfo appWidget) {
+        Log.d(TAG, "createView called: appWidgetId=" + appWidgetId + ", widget=" + appWidget.label 
+            + ", isCustom=" + appWidget.isCustomWidget() + ", provider=" + appWidget.provider);
+        
         if (appWidget.isCustomWidget()) {
-            LauncherAppWidgetHostView lahv = new LauncherAppWidgetHostView(mContext);
-            lahv.setAppWidget(0, appWidget);
-            CustomWidgetManager.INSTANCE.get(mContext).onViewCreated(lahv);
-            return lahv;
+            Log.d(TAG, "Creating CUSTOM widget view for: " + appWidget.label);
+            return createCustomWidgetHostView(appWidgetId, appWidget);
         }
 
+        Log.d(TAG, "Creating STANDARD app widget view for: " + appWidget.label);
         LauncherAppWidgetHostView view = createViewInternal(appWidgetId, appWidget);
         if (mOnViewCreationCallback != null) mOnViewCreationCallback.accept(view);
         // Do not update mViews on a background thread call, as the holder is not thread safe.
@@ -493,6 +497,10 @@ public class LauncherWidgetHolder {
     @NonNull
     protected LauncherAppWidgetHostView createViewInternal(
             int appWidgetId, @NonNull LauncherAppWidgetProviderInfo appWidget) {
+        if (appWidget.isCustomWidget()) {
+            return createCustomWidgetHostView(appWidgetId, appWidget);
+        }
+
         if ((mFlags.get() & FLAG_LISTENING) == 0) {
             // Since the launcher hasn't started listening to widget updates, we can't simply call
             // host.createView here because the later will make a binder call to retrieve
@@ -509,19 +517,6 @@ public class LauncherWidgetHolder {
             try {
                 LauncherAppWidgetHostView hostView = (LauncherAppWidgetHostView) mWidgetHost.createView(
                         mContext, appWidgetId, appWidget);
-
-                // Handle custom widgets (Music Pro, etc.) that use Java views instead of RemoteViews
-                if (appWidgetId <= com.android.launcher3.model.data.LauncherAppWidgetInfo.CUSTOM_WIDGET_ID
-                        && appWidget instanceof com.android.launcher3.widget.custom.CustomAppWidgetProviderInfo
-                        && appWidget.provider.equals(com.android.launcher3.widget.custom.MusicWidgetProvider.COMPONENT_NAME)) {
-                    com.android.launcher3.widget.CustomWidgetHostView customView =
-                            new com.android.launcher3.widget.CustomWidgetHostView(mContext);
-                    customView.setAppWidget(appWidgetId, appWidget);
-                    ((android.view.ViewGroup) hostView).addView(customView,
-                            new android.widget.FrameLayout.LayoutParams(
-                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
-                }
                 return hostView;
             } catch (Exception e) {
                 if (!Utilities.isBinderSizeError(e)) {
@@ -540,6 +535,36 @@ public class LauncherWidgetHolder {
                 return view;
             }
         }
+    }
+
+    @NonNull
+    private LauncherAppWidgetHostView createCustomWidgetHostView(int appWidgetId,
+            @NonNull LauncherAppWidgetProviderInfo appWidget) {
+        Log.d(TAG, "createCustomWidgetHostView called for widget: " + appWidget.label + ", provider: " + appWidget.provider);
+        LauncherAppWidgetHostView hostView = new LauncherAppWidgetHostView(mContext);
+        hostView.setAppWidget(appWidgetId, appWidget);
+
+        Log.d(TAG, "Requesting view from CustomWidgetManager for: " + appWidget.provider);
+        CustomWidgetManager customWidgetManager = getCustomWidgetManager();
+        View customView = customWidgetManager.createCustomWidgetView(appWidget, mContext);
+        if (customView != null) {
+            Log.d(TAG, "CustomWidgetManager returned a valid view, adding to host");
+            hostView.addView(customView, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT));
+        } else {
+            Log.w(TAG, "CustomWidgetManager returned NULL view for widget: " + appWidget.label
+                + ", provider: " + appWidget.provider + ". Using empty placeholder host.");
+            customWidgetManager.onViewCreated(hostView);
+        }
+
+        return hostView;
+    }
+
+    @NonNull
+    @VisibleForTesting
+    protected CustomWidgetManager getCustomWidgetManager() {
+        return CustomWidgetManager.INSTANCE.get(mContext);
     }
 
     /** Clears all the views from the host */

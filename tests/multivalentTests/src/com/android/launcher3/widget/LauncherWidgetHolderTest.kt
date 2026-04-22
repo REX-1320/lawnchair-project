@@ -15,12 +15,15 @@
  */
 package com.android.launcher3.widget
 
+import android.content.ComponentName
 import androidx.test.annotation.UiThreadTest
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.android.launcher3.BuildConfig.WIDGETS_ENABLED
 import com.android.launcher3.util.ActivityContextWrapper
 import com.android.launcher3.util.LauncherMultivalentJUnit
+import com.android.launcher3.widget.custom.CustomAppWidgetProviderInfo
+import com.android.launcher3.widget.custom.CustomWidgetManager
 import com.android.launcher3.widget.LauncherWidgetHolder.FLAG_ACTIVITY_RESUMED
 import com.android.launcher3.widget.LauncherWidgetHolder.FLAG_ACTIVITY_STARTED
 import com.android.launcher3.widget.LauncherWidgetHolder.FLAG_STATE_IS_NORMAL
@@ -36,7 +39,9 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
+import org.mockito.kotlin.any
 
 @SmallTest
 @RunWith(LauncherMultivalentJUnit::class)
@@ -113,6 +118,43 @@ class LauncherWidgetHolderTest {
         assertEquals(APP_WIDGET_ID, widgetHolder.mViews.get(0).appWidgetId)
         widgetHolder.deleteAppWidgetId(APP_WIDGET_ID)
         assertEquals(0, widgetHolder.mViews.size())
+    }
+
+    @Test
+    @UiThreadTest
+    fun widget_holder_create_custom_view_falls_back_to_empty_host_when_plugin_view_missing() {
+        val customManager = mock(CustomWidgetManager::class.java)
+        val customWidgetInfo =
+            CustomAppWidgetProviderInfo().apply {
+                provider =
+                    ComponentName(
+                        getInstrumentation().targetContext.packageName,
+                        "#custom-widget-regression"
+                    )
+                label = "Regression Widget"
+                spanX = 2
+                spanY = 2
+            }
+
+        doReturn(null).whenever(customManager).createCustomWidgetView(eq(customWidgetInfo), any())
+
+        val testHolder =
+            object : LauncherWidgetHolder(
+                ActivityContextWrapper(getInstrumentation().targetContext)
+            ) {
+                override fun getCustomWidgetManager(): CustomWidgetManager = customManager
+            }
+
+        try {
+            val hostView = testHolder.createView(APP_WIDGET_ID + 1, customWidgetInfo)
+            val launcherHostView = hostView as LauncherAppWidgetHostView
+
+            assertTrue(launcherHostView is LauncherAppWidgetHostView)
+            assertEquals(0, launcherHostView.childCount)
+            verify(customManager).onViewCreated(eq(launcherHostView))
+        } finally {
+            testHolder.destroy()
+        }
     }
 
     @Test
