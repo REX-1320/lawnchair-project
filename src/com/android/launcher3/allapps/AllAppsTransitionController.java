@@ -187,6 +187,12 @@ public class AllAppsTransitionController
     private float mShiftRange; // changes depending on the orientation
     private float mProgress; // [0, 1], mShiftRange * mProgress = shiftCurrent
 
+    // Frame timing optimization: cache transform values to avoid redundant UI updates
+    private float mLastScale = 1f;     // Last applied scale value
+    private float mLastAlpha = 1f;     // Last applied workspace alpha
+    private float mPreviousProgress = 1f; // For lightweight smoothing
+    private long mLastFrameTime = 0; // Frame timing for adaptive smoothing (nanoTime)
+
     private ScrimView mScrimView;
 
     private MultiValueAlpha mAppsViewAlpha;
@@ -242,6 +248,11 @@ public class AllAppsTransitionController
      *      PendingAnimation)
      */
     public void setProgress(float progress) {
+        // Frame-perfect updates: clamp and snap for crisp edges
+        progress = Math.max(0f, Math.min(1f, progress));
+        if (progress < 0.002f) progress = 0f;
+        if (progress > 0.998f) progress = 1f;
+
         mProgress = progress;
 
         boolean fromBackground =
@@ -256,36 +267,62 @@ public class AllAppsTransitionController
 
         mLauncher.onAllAppsTransition(1 - progress);
 
-        // Prevent conflict with system gesture
-        if (!fromBackground) {
-
-            // Premium iOS-like animation: ease-out cubic (1-(1-t)^3) for snappier response
-            // More responsive than quad, faster entrance acceleration for premium feel
-            float easeProgress = 1f - ((1f - progress) * (1f - progress) * (1f - progress));
-
-            // Scale transition: 0.96 → 1.0 (opening) / 1.0 → 0.96 (closing)
-            // Adjusted range: 0.045 scale variation for more pronounced, responsive effect
-            float scale = 1f - (0.045f * (1f - easeProgress));
-            mAppsView.setScaleX(scale);
-            mAppsView.setScaleY(scale);
-
-            // Dual-layer alpha for refined depth:
-            // AppsView: smooth fade in/out (0.97-1.0) for polished look
-            float appsAlpha = 0.97f + (0.03f * easeProgress);
-            mAppsView.setAlpha(appsAlpha);
-
-            // Workspace: dim effect as drawer opens (0.82-1.0) for improved focus redirect
-            // Increased dim range for better visual separation
-            float workspaceAlpha = 0.82f + (0.18f * easeProgress);
-            mLauncher.getWorkspace().setAlpha(workspaceAlpha);
+        // When closing via home gesture/button (fromBackground == true),
+        // apply NO additional transforms - let system gesture control animation
+        if (fromBackground) {
+            // Reset state when fully closed
+            if (progress == 0f) {
+                mAppsView.setScaleX(1f);
+                mAppsView.setScaleY(1f);
+                mLauncher.getWorkspace().setAlpha(1f);
+                mPreviousProgress = 0f;
+                mLastScale = 1f;
+                mLastAlpha = 1f;
+                mLastFrameTime = System.nanoTime();
+            }
+            boolean hasScrim = progress < NAV_BAR_COLOR_FORCE_UPDATE_THRESHOLD
+                    && mLauncher.getAppsView().getNavBarScrimHeight() > 0;
+            mLauncher.getSystemUiController().updateUiState(
+                    UI_STATE_ALL_APPS, hasScrim ? mNavScrimFlag : 0);
+            return;
         }
 
-        // Proper reset when closed: clear all transforms
+        // Frame-aligned adaptive smoothing: velocity-aware interpolation based on actual frame time
+        long now = System.nanoTime();
+        float deltaSeconds = (now - mLastFrameTime) / 1_000_000_000f;
+        mLastFrameTime = now;
+
+        // Adaptive smoothing factor: higher on fast frames (120fps), lower on slow frames (60fps)
+        // Clamp to [0, 1] to prevent over-interpolation on frame drops
+        float smoothingFactor = Math.min(1f, deltaSeconds * 12f);
+
+        float smooth = mPreviousProgress + (progress - mPreviousProgress) * smoothingFactor;
+        mPreviousProgress = smooth;
+
+        float scale = 0.96f + (0.04f * smooth);
+        float alpha = 0.85f + (0.15f * smooth);
+
+        // Avoid redundant UI updates: only set if difference exceeds threshold (0.002f)
+        if (Math.abs(scale - mLastScale) > 0.002f) {
+            mAppsView.setScaleX(scale);
+            mAppsView.setScaleY(scale);
+            mLastScale = scale;
+        }
+
+        if (Math.abs(alpha - mLastAlpha) > 0.002f) {
+            mLauncher.getWorkspace().setAlpha(alpha);
+            mLastAlpha = alpha;
+        }
+
+        // Reset when fully closed
         if (progress == 0f) {
             mAppsView.setScaleX(1f);
             mAppsView.setScaleY(1f);
-            mAppsView.setAlpha(1f);
             mLauncher.getWorkspace().setAlpha(1f);
+            mPreviousProgress = 0f;
+            mLastScale = 1f;
+            mLastAlpha = 1f;
+            mLastFrameTime = System.nanoTime();
         }
 
         boolean hasScrim = progress < NAV_BAR_COLOR_FORCE_UPDATE_THRESHOLD
