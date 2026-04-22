@@ -187,11 +187,10 @@ public class AllAppsTransitionController
     private float mShiftRange; // changes depending on the orientation
     private float mProgress; // [0, 1], mShiftRange * mProgress = shiftCurrent
 
-    // Frame timing optimization: cache transform values to avoid redundant UI updates
+    // Lightweight animation cache: prevents redundant updates and jitter
     private float mLastScale = 1f;     // Last applied scale value
     private float mLastAlpha = 1f;     // Last applied workspace alpha
-    private float mPreviousProgress = 1f; // For lightweight smoothing
-    private long mLastFrameTime = 0; // Frame timing for adaptive smoothing (nanoTime)
+    private float mPreviousProgress = 1f; // For stable smoothing
 
     private ScrimView mScrimView;
 
@@ -248,10 +247,10 @@ public class AllAppsTransitionController
      *      PendingAnimation)
      */
     public void setProgress(float progress) {
-        // Frame-perfect updates: clamp and snap for crisp edges
+        // Edge snapping: tighter threshold for crisper endpoints
         progress = Math.max(0f, Math.min(1f, progress));
-        if (progress < 0.002f) progress = 0f;
-        if (progress > 0.998f) progress = 1f;
+        if (progress < 0.0015f) progress = 0f;
+        if (progress > 0.9985f) progress = 1f;
 
         mProgress = progress;
 
@@ -262,15 +261,13 @@ public class AllAppsTransitionController
                 ? mLauncher.getDeviceProfile().getDeviceProperties().getHeightPx()
                 : mShiftRange;
 
-        // Core translation (keep intact)
+        // Core translation (always apply)
         getAppsViewProgressTranslationY().setValue(mProgress * shiftRange);
 
         mLauncher.onAllAppsTransition(1 - progress);
 
-        // When closing via home gesture/button (fromBackground == true),
-        // apply NO additional transforms - let system gesture control animation
+        // System gesture case: skip all transforms to prevent conflict
         if (fromBackground) {
-            // Reset state when fully closed
             if (progress == 0f) {
                 mAppsView.setScaleX(1f);
                 mAppsView.setScaleY(1f);
@@ -278,7 +275,6 @@ public class AllAppsTransitionController
                 mPreviousProgress = 0f;
                 mLastScale = 1f;
                 mLastAlpha = 1f;
-                mLastFrameTime = System.nanoTime();
             }
             boolean hasScrim = progress < NAV_BAR_COLOR_FORCE_UPDATE_THRESHOLD
                     && mLauncher.getAppsView().getNavBarScrimHeight() > 0;
@@ -287,34 +283,28 @@ public class AllAppsTransitionController
             return;
         }
 
-        // Frame-aligned adaptive smoothing: velocity-aware interpolation based on actual frame time
-        long now = System.nanoTime();
-        float deltaSeconds = (now - mLastFrameTime) / 1_000_000_000f;
-        mLastFrameTime = now;
-
-        // Adaptive smoothing factor: higher on fast frames (120fps), lower on slow frames (60fps)
-        // Clamp to [0, 1] to prevent over-interpolation on frame drops
-        float smoothingFactor = Math.min(1f, deltaSeconds * 12f);
-
-        float smooth = mPreviousProgress + (progress - mPreviousProgress) * smoothingFactor;
+        // Responsive smoothing: 0.65f factor for fast response without delay feeling
+        float smooth = mPreviousProgress + (progress - mPreviousProgress) * 0.65f;
         mPreviousProgress = smooth;
 
-        float scale = 0.96f + (0.04f * smooth);
-        float alpha = 0.85f + (0.15f * smooth);
+        // Subtle scale: 0.975f → 1.0f for natural, refined zoom effect
+        float scale = 0.975f + (0.025f * smooth);
+        // Deeper alpha: 0.88f → 1.0f for better visual depth and focus redirect
+        float alpha = 0.88f + (0.12f * smooth);
 
-        // Avoid redundant UI updates: only set if difference exceeds threshold (0.002f)
-        if (Math.abs(scale - mLastScale) > 0.002f) {
+        // Responsive update threshold: 0.0015f prevents over-smoothing on slow swipes
+        if (Math.abs(scale - mLastScale) > 0.0015f) {
             mAppsView.setScaleX(scale);
             mAppsView.setScaleY(scale);
             mLastScale = scale;
         }
 
-        if (Math.abs(alpha - mLastAlpha) > 0.002f) {
+        if (Math.abs(alpha - mLastAlpha) > 0.0015f) {
             mLauncher.getWorkspace().setAlpha(alpha);
             mLastAlpha = alpha;
         }
 
-        // Reset when fully closed
+        // Reset transforms when fully closed
         if (progress == 0f) {
             mAppsView.setScaleX(1f);
             mAppsView.setScaleY(1f);
@@ -322,7 +312,6 @@ public class AllAppsTransitionController
             mPreviousProgress = 0f;
             mLastScale = 1f;
             mLastAlpha = 1f;
-            mLastFrameTime = System.nanoTime();
         }
 
         boolean hasScrim = progress < NAV_BAR_COLOR_FORCE_UPDATE_THRESHOLD
